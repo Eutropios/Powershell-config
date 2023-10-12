@@ -45,8 +45,25 @@ function Get-Perms ($folder) {
     @{Label = "Inherited"; Expression = { $_.IsInherited } } | Format-Table -auto
 }
 
-#kills ssh-agent in powershell, requires gsudo program
 function killssh {
+    <#
+    .SYNOPSIS
+    Kills any active ssh-agent processes
+
+    .DESCRIPTION
+    Requests admin privileges via UAC (User Account Control) and ends all active ssh-agent processes.
+    REQUIRES gsudo TO RUN
+
+    .INPUTS
+    None. You cannot pipe objects to killsh.
+
+    .OUTPUTS
+    System.String. killssh returns a string with either the number of ssh-agent processes killed, or with an ERROR
+    stating that there were no ssh-agent processes active.
+
+    .EXAMPLE
+    PS> killssh
+    #>
     gsudo taskkill /F /IM ssh-agent.exe /T
 }
 
