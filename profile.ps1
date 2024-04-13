@@ -35,27 +35,71 @@ function gfind ($filename) {
     }
 }
 
-#Function that displays user perms of a specific directory or file
-#Display as a table
-function Get-Perms ($folder) {
-    (Get-Acl $folder).access | Select-Object `
+function Get-ChildItem-Readable {
+    [CmdletBinding()]
+    [Alias("lsr")]
+    [Alias("gcir")]
+    param (
+        [PSDefaultValue(Help = ".")]
+        $folder = "."
+    )
+    Get-ChildItem $folder | Select-Object Name, @{Name = "KiloBytes"; Expression = { $_.Length / 1KB } }
+}
+
+function Get-Perms {
+    <#
+    .SYNOPSIS
+    Display user permissions of a specific file or directory.
+
+    .DESCRIPTION
+    Display user permissions of a specific file or directory.
+    If no parameter is supplied, the current directory is used.
+
+    .PARAMETER fileOrDir
+    The file or directory to display the permissions of. Defaults to current directory.
+
+    .INPUTS
+    None. Objects cannot be piped into this function
+
+    .OUTPUTS
+    System.Object. Get-Perms prints the permissions of the file or directory as a table.
+
+    .EXAMPLE
+    Function without passing any arguments
+    PS> Get-Perms
+
+    .EXAMPLE
+    Function passing a directory
+    PS> Get-Perms ~\Desktop
+
+    .EXAMPLE
+    Function passing a file
+    PS> Get-Perms ~\Documents\foo.txt
+    #>
+    [CmdletBinding()]
+    [Alias("getperms")]
+    param (
+        [PSDefaultValue(Help = ".")]
+        $fileOrDir = "."
+    )
+    (Get-Acl $fileOrDir).access | Select-Object `
     @{Label = "Identity"; Expression = { $_.IdentityReference } }, `
     @{Label = "Right"; Expression = { $_.FileSystemRights } }, `
     @{Label = "Access"; Expression = { $_.AccessControlType } }, `
     @{Label = "Inherited"; Expression = { $_.IsInherited } } | Format-Table -auto
 }
 
-function killssh {
+function Stop-Agents {
     <#
     .SYNOPSIS
-    Kills any active ssh-agent processes
+    Kill any active ssh-agent processes. REQUIRES gsudo TO RUN.
 
     .DESCRIPTION
     Requests admin privileges via UAC (User Account Control) and ends all active ssh-agent processes.
-    REQUIRES gsudo TO RUN
+    REQUIRES gsudo TO RUN.
 
     .INPUTS
-    None. You cannot pipe objects to killsh.
+    None. You cannot pipe objects to killssh.
 
     .OUTPUTS
     System.String. killssh returns a string with either the number of ssh-agent processes killed, or with an ERROR
@@ -64,6 +108,10 @@ function killssh {
     .EXAMPLE
     PS> killssh
     #>
+    [CmdletBinding()]
+    [Alias("killssh")]
+    [Alias("Kill-Agents")]
+    param()
     gsudo taskkill /F /IM ssh-agent.exe /T
 }
 
@@ -76,10 +124,64 @@ function psfind ($processid) {
     Get-Process -Id $processid
 }
 
+function update-all {
+    <#
+    .SYNOPSIS
+    Takes an array command strings and executes them.
+
+    .DESCRIPTION
+    Takes an array of commands in the form of strings and executes them in subshells. Elevates user privileges to
+    administrator if needed. Meant to be set and forget.
+
+    .EXAMPLE
+    update-all
+
+    .NOTES
+    Credit for the original script goes to https://github.com/killjoy1221. I simply ported this to PowerShell.
+    #>
+    $NO_FORMAT = "$([char]27)[0m"
+
+    function Update-Script {
+        param (
+            [Parameter(Mandatory = $true)]
+            [string]$CommandLine
+        )
+
+        $prog = $CommandLine.Split(" ")[0]
+        $progargs = $CommandLine.Substring($prog.Length).Trim()
+        # Replace "gsudo" with "sudo" if you have the sudo for windows tool from the dev channel
+        if ($prog -eq "gsudo") {
+            $prog = $progargs.Split(" ")[0]
+        }
+        if (Get-Command -Name $prog -ErrorAction SilentlyContinue) {
+            Write-Host -ForegroundColor Cyan '$'"$NO_FORMAT $CommandLine"
+            Invoke-Expression -Command $CommandLine
+        }
+    }
+
+    $updates = @(
+        "winget upgrade --all"
+        "pnpm -gL update"
+        "pipx upgrade-all"
+    )
+
+    function Main {
+        foreach ($cmd in $updates) {
+            Update-Script -CommandLine $cmd
+        }
+    }
+    Main
+}
+
 #Overrides the command prompt
 function prompt {
     $esc = "$([char]27)"
-	("PS $esc[92m$([Environment]::UserName)$esc[0m@" `
+    ("PS $esc[92m$([Environment]::UserName)$esc[0m@" `
         + "$esc[96m$($env:COMPUTERNAME.ToLower())$esc[0m:" `
         + "$esc[94m$((Get-Location).Path)$esc[0m$ ").Replace($HOME, "~")
 }
+
+#34de4b3d-13a8-4540-b76d-b9e8d3851756 PowerToys CommandNotFound module
+
+Import-Module "$env:LOCALAPPDATA\PowerToys\WinUI3Apps\..\WinGetCommandNotFound.psd1"
+#34de4b3d-13a8-4540-b76d-b9e8d3851756
