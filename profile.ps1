@@ -120,6 +120,7 @@ function geoip ($ipAddress) {
     curl "https://ipinfo.io/$ipAddress/json"
 }
 
+#gets name of process by processid
 function psfind ($processid) {
     Get-Process -Id $processid
 }
@@ -163,6 +164,7 @@ function update-all {
         "winget upgrade --all"
         "pnpm -gL update"
         "pipx upgrade-all"
+        "pip cache purge"
     )
 
     function Main {
@@ -181,7 +183,7 @@ function prompt {
         + "$esc[94m$((Get-Location).Path)$esc[0m$ ").Replace($HOME, "~")
 }
 
-#34de4b3d-13a8-4540-b76d-b9e8d3851756 PowerToys CommandNotFound module
+#f45873b3-b655-43a6-b217-97c00aa0db58 PowerToys CommandNotFound module
 
-Import-Module "$env:LOCALAPPDATA\PowerToys\WinUI3Apps\..\WinGetCommandNotFound.psd1"
-#34de4b3d-13a8-4540-b76d-b9e8d3851756
+Import-Module -Name Microsoft.WinGet.CommandNotFound
+#f45873b3-b655-43a6-b217-97c00aa0db58
