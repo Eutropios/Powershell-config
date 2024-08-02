@@ -7,6 +7,7 @@ $PSStyle.FileInfo.SymbolicLink = "`e[96m"
 #Aliases
 New-Alias touch New-Item
 New-Alias which Get-Command
+New-Alias grep rg
 
 #Functions
 
@@ -121,14 +122,21 @@ function geoip ($ipAddress) {
 }
 
 #gets name of process by processid
-function psfind ($processid) {
+function Get-ProcessName {
+    [CmdletBinding()]
+    [Alias("psfind")]
+    [Alias("psname")]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$processid
+    )
     Get-Process -Id $processid
 }
 
 function update-all {
     <#
     .SYNOPSIS
-    Takes an array command strings and executes them.
+    Executes a bunch of upgrade commands
 
     .DESCRIPTION
     Takes an array of commands in the form of strings and executes them in subshells. Elevates user privileges to
@@ -142,36 +150,34 @@ function update-all {
     #>
     $NO_FORMAT = "$([char]27)[0m"
 
-    function Update-Script {
+    function Run {
         param (
             [Parameter(Mandatory = $true)]
-            [string]$CommandLine
-        )
+            [string]$prog,
 
-        $prog = $CommandLine.Split(" ")[0]
-        $progargs = $CommandLine.Substring($prog.Length).Trim()
+            [Parameter(Mandatory = $true)]
+            [array]$progargs
+        )
         # Replace "gsudo" with "sudo" if you have the sudo for windows tool from the dev channel
         if ($prog -eq "gsudo") {
-            $prog = $progargs.Split(" ")[0]
+            $prog = $progargs[0]
+            $progargs = $progargs[1..$progargs.Length]
         }
-        if (Get-Command -Name $prog -ErrorAction SilentlyContinue) {
-            Write-Host -ForegroundColor Cyan '$'"$NO_FORMAT $CommandLine"
-            Invoke-Expression -Command $CommandLine
+
+        # Check if the program exists in the command path
+        if (Get-Command $prog -ErrorAction SilentlyContinue) {
+            Write-Host "$C_TEAL`$ $NO_FORMAT $prog $($progargs -join ' ')"
+            & $prog @progargs
         }
     }
-
-    $updates = @(
-        "winget upgrade --all"
-        "pnpm -gL update"
-        "pipx upgrade-all"
-        "pip cache purge"
-    )
 
     function Main {
-        foreach ($cmd in $updates) {
-            Update-Script -CommandLine $cmd
-        }
+        Run -prog "winget" -progargs "upgrade", "--all"
+        Run -prog 'pnpm' -progargs 'update', '-gL'
+        Run -prog 'pipx' -progargs 'upgrade-all'
+        Run -prog 'pip' -progargs 'cache', 'purge'
     }
+
     Main
 }
 
@@ -187,3 +193,10 @@ function prompt {
 
 Import-Module -Name Microsoft.WinGet.CommandNotFound
 #f45873b3-b655-43a6-b217-97c00aa0db58
+
+# Completions
+Invoke-Expression -Command $(gh completion -s powershell | Out-String)
+
+Invoke-Expression -Command $(ruff generate-shell-completion powershell | Out-String)
+
+Invoke-Expression -Command $(uv generate-shell-completion powershell | Out-String)
