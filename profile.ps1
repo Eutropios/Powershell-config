@@ -9,7 +9,7 @@ New-Alias touch New-Item
 New-Alias which Get-Command
 New-Alias grep rg
 
-#Functions
+# Custom classes
 
 #Custom exception that takes a custom message
 class CustomException : Exception {
@@ -20,8 +20,27 @@ class CustomException : Exception {
     }
 }
 
+#Alias-functions, functions that act like aliases
+
+function npp {
+    param(
+        [Parameter(
+            ValueFromRemainingArguments=$true
+        )][string[]]
+        $args
+    )
+	start notepad++ $args
+}
+
+#Functions
+
 #Function that finds a file or subdirectory in $filename directory
-function gfind ($filename) {
+function Find-File {
+    [CmdletBinding()]
+    [Alias("gfind")]
+    param (
+        [string]$filename
+    )
     try {
         if ([string]::IsNullOrWhiteSpace($filename)) {
             throw [CustomException]::new('Error message', 'Please specify a target')
@@ -148,6 +167,9 @@ function update-all {
     .NOTES
     Credit for the original script goes to https://github.com/killjoy1221. I simply ported this to PowerShell.
     #>
+    [CmdletBinding()]
+    [Alias("upgrade-all")]
+    param()
     $NO_FORMAT = "$([char]27)[0m"
 
     function Run {
@@ -172,10 +194,13 @@ function update-all {
     }
 
     function Main {
+		Run -prog "rustup" -progargs "update"
+		Run -prog "cargo-install-update" -progargs "install-update", "--all"
         Run -prog "winget" -progargs "upgrade", "--all"
-        Run -prog 'pnpm' -progargs 'update', '-gL'
-        Run -prog 'pipx' -progargs 'upgrade-all'
-        Run -prog 'pip' -progargs 'cache', 'purge'
+        Run -prog "pnpm" -progargs "update", "-gL"
+        Run -prog "pipx" -progargs "upgrade-all"
+        Run -prog "pip" -progargs "cache", "purge"
+        Run -prog "pip" -progargs "list", "--outdated"
     }
 
     Main
@@ -193,10 +218,3 @@ function prompt {
 
 Import-Module -Name Microsoft.WinGet.CommandNotFound
 #f45873b3-b655-43a6-b217-97c00aa0db58
-
-# Completions
-Invoke-Expression -Command $(gh completion -s powershell | Out-String)
-
-Invoke-Expression -Command $(ruff generate-shell-completion powershell | Out-String)
-
-Invoke-Expression -Command $(uv generate-shell-completion powershell | Out-String)
