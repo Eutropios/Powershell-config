@@ -23,16 +23,30 @@ class CustomException : Exception {
 #Alias-functions, functions that act like aliases
 
 function npp {
+    [CmdletBinding()]
     param(
         [Parameter(
-            ValueFromRemainingArguments=$true
+            ValueFromRemainingArguments = $true
         )][string[]]
         $args
     )
-	start notepad++ $args
+    Start-Process notepad++ $args
 }
 
 #Functions
+
+# Function to add:
+# First, in Explorer, browse to the subdirectory where your code resides. Then type 'powershell' in the Explorer bar, which will open a copy of Powershell there. Then type:
+#(dir -include *.cpp, *.h -recurse | select-string "^").Count
+
+#To exclude blank lines:
+#(dir -include *.cpp, *.h -recurse | select-string "^(\s*)$" -notMatch).Count
+
+#Or, to also exclude '//' comments:
+#(dir -include *.cpp, *.h -recurse | select-string "^(\s*)//" -notMatch | select-string "^(\s*)$" -notMatch).Count
+
+#Change the '*.cpp' and '.h' to whatever file extensions you are interested in. Remove '*.cpp' if you are only interested in headers.
+
 
 #Function that finds a file or subdirectory in $filename directory
 function Find-File {
@@ -194,11 +208,11 @@ function update-all {
     }
 
     function Main {
-		Run -prog "rustup" -progargs "update"
-		Run -prog "cargo-install-update" -progargs "install-update", "--all"
+        Run -prog "rustup" -progargs "update"
+        Run -prog "cargo-install-update" -progargs "install-update", "--all"
         Run -prog "winget" -progargs "upgrade", "--all"
         Run -prog "pnpm" -progargs "update", "-gL"
-        Run -prog "pipx" -progargs "upgrade-all"
+        Run -prog "uv" -progargs "tool", "upgrade", "--all"
         Run -prog "pip" -progargs "cache", "purge"
         Run -prog "pip" -progargs "list", "--outdated"
     }
